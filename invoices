@@ -1,0 +1,44 @@
+
+import requests, csv, os
+
+API_KEY = ""
+BASE = "https://api.servicem8.com/api_1.0"
+OUT_DIR = "servicem8_export"
+os.makedirs(OUT_DIR, exist_ok=True)
+HEADERS = {"X-API-Key": API_KEY}
+
+def fetch_all(endpoint):
+    cursor = "-1"
+    rows = []
+    while cursor:
+        r = requests.get(f"{BASE}/{endpoint}?cursor={cursor}", headers=HEADERS, timeout=30)
+        if r.status_code != 200:
+            raise SystemExit(f"{endpoint} -> HTTP {r.status_code}: {r.text}")
+        rows.extend(r.json())
+        cursor = r.headers.get("x-next-cursor")
+    return rows
+
+def write_csv(rows, path):
+    if not rows:
+        open(path, "w", encoding="utf-8").close(); return 0
+    cols = sorted({k for r in rows for k in r.keys()})
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=cols); w.writeheader(); w.writerows(rows)
+    return len(rows)
+
+if __name__ == "__main__":
+    print("Fetching jobs (invoice headers)…")
+    jobs = fetch_all("job.json")
+    print(f"jobs: {write_csv(jobs, os.path.join(OUT_DIR, 'invoices_jobs.csv'))}")
+
+    print("Fetching job materials (line items)…")
+    mats = fetch_all("jobmaterial.json")     # <-- correct endpoint
+    print(f"materials: {write_csv(mats, os.path.join(OUT_DIR, 'invoices_lines.csv'))}")
+
+    print("Fetching job payments…")
+    pays = fetch_all("jobpayment.json")
+    print(f"payments: {write_csv(pays, os.path.join(OUT_DIR, 'invoices_payments.csv'))}")
+
+    print("Fetching companies (clients)…")
+    comps = fetch_all("company.json")
+    print(f"companies: {write_csv(comps, os.path.join(OUT_DIR, 'companies.csv'))}")
