@@ -1,7 +1,7 @@
 # export_servicem8_suppliers.py
 import requests, csv, sys
 
-API_KEY = "smk-511b2c-43457da86899e3fd-93bb6f076181c752"
+API_KEY = ""
 BASE = "https://api.servicem8.com/api_1.0/supplier.json"
 HEADERS = {"X-API-Key": API_KEY}
 OUT = "servicem8_suppliers.csv"
