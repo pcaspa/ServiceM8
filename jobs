@@ -1,0 +1,38 @@
+
+import requests, csv
+
+API_KEY = ""            # ServiceM8 > Settings > API Keys (read access is fine)
+BASE = "https://api.servicem8.com/api_1.0/job.json"
+OUT  = "servicem8_jobs.csv"
+
+def fetch_all_jobs():
+    headers = {"X-API-Key": API_KEY}
+    cursor = "-1"                   # start cursor
+    all_rows = []
+
+    while cursor:
+        url = f"{BASE}?cursor={cursor}"
+        r = requests.get(url, headers=headers, timeout=30)
+        if r.status_code != 200:
+            raise SystemExit(f"HTTP {r.status_code}: {r.text}")
+
+        batch = r.json()            # up to 5,000 records per page
+        all_rows.extend(batch)
+
+        cursor = r.headers.get("x-next-cursor")  # None when finished
+
+    return all_rows
+
+def to_csv(rows, path):
+    if not rows:
+        print("No jobs found."); return
+    # union of all keys to include ALL FIELDS
+    fieldnames = sorted({k for row in rows for k in row.keys()})
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w.writeheader(); w.writerows(rows)
+    print(f"Exported {len(rows)} jobs -> {path}")
+
+if __name__ == "__main__":
+    jobs = fetch_all_jobs()
+    to_csv(jobs, OUT)
